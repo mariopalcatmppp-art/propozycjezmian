@@ -5,7 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 from flask import Flask
 
-# Niewielki serwer HTTP, żeby Render nie ubijał usługi
+# Niewielki serwer HTTP dla Rendera
 app = Flask('')
 
 @app.route('/')
@@ -16,8 +16,8 @@ def run_http():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# Pobieranie danych z ustawień
-TOKEN = os.getenv("MTU1MDc5NTk0MjM3NzE2NDgzMA.G_pJuY.7-5Jq9r7ONAbeW4YqL8l0rrUw4r4qjzt4DUg5k")
+# Pobieranie danych ze zmiennych środowiskowych
+TOKEN = os.getenv("MTU1MDc5NTk0MjM3NzE2NDgzMA.GDiRNf.QGooY0pNLW4C4FbuQt76d5OK6r5Ro5A_m6BKes")
 SUGGESTIONS_CHANNEL_ID = 1550764675224969237
 
 class ModalPropozycji(discord.ui.Modal, title="Nowa Propozycja"):
@@ -72,11 +72,13 @@ async def propozycja(interaction: discord.Interaction):
     await interaction.response.send_modal(ModalPropozycji())
 
 if __name__ == "__main__":
-    # Uruchomienie serwera www w osobnym wątku
-    t = threading.Thread(target=run_http)
+    # Uruchomienie Flaska w tle (daemon thread)
+    t = threading.Thread(target=run_http, daemon=True)
     t.start()
 
+    # Sprawdzenie i uruchomienie bota
     if not TOKEN:
-        print("BŁĄD: Brak tokenu DISCORD_TOKEN!")
+        print("BŁĄD: Brak tokenu DISCORD_TOKEN w Environment Variables!")
     else:
+        print("Łączenie z Discordem...")
         bot.run(TOKEN)
