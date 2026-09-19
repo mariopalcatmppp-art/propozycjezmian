@@ -18,7 +18,6 @@ def run_http():
 # KONFIGURACJA:
 TOKEN = "MTU1MDc5NTk0MjM3NzE2NDgzMA.GDiRNf.QGooY0pNLW4C4FbuQt76d5OK6r5Ro5A_m6BKes"
 SUGGESTIONS_CHANNEL_ID = 1550764675224969237
-
 # Okno formularza po kliknięciu przycisku
 class ModalPropozycji(discord.ui.Modal, title="Nowa Propozycja"):
     tytul = discord.ui.TextInput(
