@@ -17,7 +17,7 @@ def run_http():
     app.run(host='0.0.0.0', port=port)
 
 # Pobieranie danych ze zmiennych środowiskowych
-TOKEN = os.getenv("MTU1MDc5NTk0MjM3NzE2NDgzMA.GDiRNf.QGooY0pNLW4C4FbuQt76d5OK6r5Ro5A_m6BKes")
+TOKEN = "MTU1MDc5NTk0MjM3NzE2NDgzMA.GDiRNf.QGooY0pNLW4C4FbuQt76d5OK6r5Ro5A_m6BKes"
 SUGGESTIONS_CHANNEL_ID = 1550764675224969237
 
 class ModalPropozycji(discord.ui.Modal, title="Nowa Propozycja"):
