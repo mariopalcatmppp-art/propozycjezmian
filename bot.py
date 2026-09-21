@@ -18,7 +18,7 @@ def run_http():
 
 # KONFIGURACJA:
 TOKEN = os.environ.get("DISCORD_TOKEN")
-SUGGESTIONS_CHANNEL_ID = 123456789012345678  # Zastąp ID kanału propozycji (sam numer)
+SUGGESTIONS_CHANNEL_ID = 123456789012345678  # Podmień na ID swojego kanału z propozycjami (sam numer)
 
 # --- 1. MODAL DLA ADMINA (POWÓD ODRZUCENIA PROPOZYCJI) ---
 class ModalOdrzucenia(discord.ui.Modal, title="Powód Odrzucenia Propozycji"):
@@ -114,12 +114,11 @@ class WidokPropozycji(discord.ui.View):
     async def przycisk_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(ModalPropozycji())
 
-# --- 5. PRZYCISK PRZEJŚCIA DO FILMU (URL) ---
+# --- 5. PRZYCISK PRZEJŚCIA DO MATERIAŁU/LINKU (URL) ---
 class WidokLinkuFilmu(discord.ui.View):
     def __init__(self, url: str):
         super().__init__(timeout=None)
-        # Tworzenie przycisku typu Link (przekierowującego)
-        self.add_item(discord.ui.Button(label="▶️ Obejrzyj film", url=url, style=discord.ButtonStyle.link))
+        self.add_item(discord.ui.Button(label="▶️ Przejdź do materiału", url=url, style=discord.ButtonStyle.link))
 
 # --- 6. GŁÓWNA KLASA BOTA ---
 class BotPropozycji(commands.Bot):
@@ -149,9 +148,9 @@ async def setup(ctx):
     )
     await ctx.send(embed=embed, view=WidokPropozycji())
 
-# --- NOWE FUNKCJE: SOCIAL MEDIA I OGŁOSZENIA ---
+# --- FUNKCJE SOCIAL MEDIA I OGŁOSZEŃ ---
 
-# 1. Komenda !social - wyświetla odnośniki do mediów społecznościowych
+# 1. Komenda !social - linki do YouTube i Kicka
 @bot.command(name="social")
 async def social(ctx):
     embed = discord.Embed(
@@ -160,34 +159,34 @@ async def social(ctx):
         color=discord.Color.purple()
     )
     embed.add_field(
-        name="📱 TikTok", 
-        value="[Kliknij tutaj, aby przejść na TikToka](https://www.tiktok.com/)", 
+        name="🎬 YouTube", 
+        value="[Kliknij tutaj, aby przejść na YouTube](https://youtube.com/@nkt_bez_cenzury?si=seIjd17VJTIwp4VZ)", 
         inline=False
     )
     embed.add_field(
-        name="🎬 YouTube", 
-        value="[Kliknij tutaj, aby przejść na YouTube](https://www.youtube.com/)", 
+        name="🟢 Kick", 
+        value="[Kliknij tutaj, aby przejść na transmisję Kick](https://kick.com/firllii)", 
         inline=False
     )
     embed.set_footer(text="Dziękujemy za każde wsparcie i zostawiony ślad!")
     
     await ctx.send(embed=embed)
 
-# 2. Komenda !ogloszenie <link> - wysyła estetyczne powiadomienie o nowym filmie z przyciskiem
+# 2. Komenda !ogloszenie <link> - powiadomienie z przyciskiem
 @bot.command(name="ogloszenie")
 @commands.has_permissions(administrator=True)
 async def ogloszenie(ctx, url: str = None):
     await ctx.message.delete()
     
     if not url:
-        await ctx.send("❌ Użycie: `!ogloszenie <link_do_filmu>`", delete_after=5)
+        await ctx.send("❌ Użycie: `!ogloszenie <link_do_filmu_lub_streama>`", delete_after=5)
         return
 
     embed = discord.Embed(
-        title="🚀 NOWY FILM JUŻ JEST!",
+        title="🚀 NOWY MATERIAŁ / STREAM!",
         description=(
             "Właśnie wpadł nowy materiał! 🔥\n\n"
-            "Zostaw łapkę w górę, komentarz dla algorytmu i daj znać, jak Ci się podoba!\n"
+            "Wpadajcie sprawdzić, zostawcie coś po sobie dla algorytmu i dajcie znać, jak wrażenia!\n"
             "Kliknij poniższy przycisk, aby przejść bezpośrednio do materiału."
         ),
         color=discord.Color.gold()
@@ -197,7 +196,6 @@ async def ogloszenie(ctx, url: str = None):
     
     embed.set_footer(text=f"Ogłoszenie dodane przez {ctx.author.display_name}")
 
-    # Wysyłamy embed z dedykowanym przyciskiem linkującym
     await ctx.send(embed=embed, view=WidokLinkuFilmu(url))
 
 if __name__ == "__main__":
