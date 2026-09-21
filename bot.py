@@ -5,7 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 from flask import Flask
 
-# Uruchomienie prostego serwera HTTP dla Rendera
+# Uruchomienie serwera HTTP dla Rendera
 app = Flask('')
 
 @app.route('/')
@@ -17,10 +17,10 @@ def run_http():
     app.run(host='0.0.0.0', port=port)
 
 # KONFIGURACJA:
-TOKEN = "MTU1MDc5NTk0MjM3NzE2NDgzMA.GDiRNf.QGooY0pNLW4C4FbuQt76d5OK6r5Ro5A_m6BKes"
-SUGGESTIONS_CHANNEL_ID = 1550764675224969237
+TOKEN = os.environ.get("DISCORD_TOKEN")
+SUGGESTIONS_CHANNEL_ID = 123456789012345678  # Zastąp ID kanału propozycji (sam numer)
 
-# --- 1. MODAL DLA ADMINA (POWÓD ODRZUCENIA) ---
+# --- 1. MODAL DLA ADMINA (POWÓD ODRZUCENIA PROPOZYCJI) ---
 class ModalOdrzucenia(discord.ui.Modal, title="Powód Odrzucenia Propozycji"):
     powod = discord.ui.TextInput(
         label="Powód odrzucenia",
@@ -36,7 +36,6 @@ class ModalOdrzucenia(discord.ui.Modal, title="Powód Odrzucenia Propozycji"):
         embed.add_field(name="❌ Status", value=f"Odrzucona przez {interaction.user.mention}", inline=False)
         embed.add_field(name="📝 Powód odrzucenia", value=self.powod.value, inline=False)
 
-        # Wyłączamy przyciski po podjęciu decyzji
         widok = discord.ui.View.from_message(interaction.message)
         for child in widok.children:
             child.disabled = True
@@ -100,14 +99,13 @@ class ModalPropozycji(discord.ui.Modal, title="Nowa Propozycja"):
         )
         embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
 
-        # Wysyłamy propozycję wraz z przyciskami decyzyjnymi dla admina
         msg = await kanal.send(embed=embed, view=WidokDecyzjiAdmina())
         await msg.add_reaction("👍")
         await msg.add_reaction("👎")
 
         await interaction.response.send_message("Twój pomysł został wysłany!", ephemeral=True)
 
-# --- 4. PRZYCISK OTWIERAJĄCY FORMULARZ ---
+# --- 4. PRZYCISK PROPOZYCJI ---
 class WidokPropozycji(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -116,7 +114,14 @@ class WidokPropozycji(discord.ui.View):
     async def przycisk_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(ModalPropozycji())
 
-# --- 5. GLÓWNA KLASA BOTA ---
+# --- 5. PRZYCISK PRZEJŚCIA DO FILMU (URL) ---
+class WidokLinkuFilmu(discord.ui.View):
+    def __init__(self, url: str):
+        super().__init__(timeout=None)
+        # Tworzenie przycisku typu Link (przekierowującego)
+        self.add_item(discord.ui.Button(label="▶️ Obejrzyj film", url=url, style=discord.ButtonStyle.link))
+
+# --- 6. GŁÓWNA KLASA BOTA ---
 class BotPropozycji(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
@@ -124,7 +129,6 @@ class BotPropozycji(commands.Bot):
         super().__init__(command_prefix="!", intents=intents)
 
     async def setup_hook(self):
-        # Rejestrujemy widoki na stałe, by działały nawet po restarcie bota
         self.add_view(WidokPropozycji())
         self.add_view(WidokDecyzjiAdmina())
 
@@ -133,6 +137,7 @@ class BotPropozycji(commands.Bot):
 
 bot = BotPropozycji()
 
+# Komenda setupu panelu propozycji
 @bot.command(name="setup")
 @commands.has_permissions(administrator=True)
 async def setup(ctx):
@@ -143,6 +148,57 @@ async def setup(ctx):
         color=discord.Color.green()
     )
     await ctx.send(embed=embed, view=WidokPropozycji())
+
+# --- NOWE FUNKCJE: SOCIAL MEDIA I OGŁOSZENIA ---
+
+# 1. Komenda !social - wyświetla odnośniki do mediów społecznościowych
+@bot.command(name="social")
+async def social(ctx):
+    embed = discord.Embed(
+        title="🌐 Nasze Media Społecznościowe",
+        description="Bądź na bieżąco i zaobserwuj nasze profile!",
+        color=discord.Color.purple()
+    )
+    embed.add_field(
+        name="📱 TikTok", 
+        value="[Kliknij tutaj, aby przejść na TikToka](https://www.tiktok.com/)", 
+        inline=False
+    )
+    embed.add_field(
+        name="🎬 YouTube", 
+        value="[Kliknij tutaj, aby przejść na YouTube](https://www.youtube.com/)", 
+        inline=False
+    )
+    embed.set_footer(text="Dziękujemy za każde wsparcie i zostawiony ślad!")
+    
+    await ctx.send(embed=embed)
+
+# 2. Komenda !ogloszenie <link> - wysyła estetyczne powiadomienie o nowym filmie z przyciskiem
+@bot.command(name="ogloszenie")
+@commands.has_permissions(administrator=True)
+async def ogloszenie(ctx, url: str = None):
+    await ctx.message.delete()
+    
+    if not url:
+        await ctx.send("❌ Użycie: `!ogloszenie <link_do_filmu>`", delete_after=5)
+        return
+
+    embed = discord.Embed(
+        title="🚀 NOWY FILM JUŻ JEST!",
+        description=(
+            "Właśnie wpadł nowy materiał! 🔥\n\n"
+            "Zostaw łapkę w górę, komentarz dla algorytmu i daj znać, jak Ci się podoba!\n"
+            "Kliknij poniższy przycisk, aby przejść bezpośrednio do materiału."
+        ),
+        color=discord.Color.gold()
+    )
+    if ctx.guild.icon:
+        embed.set_thumbnail(url=ctx.guild.icon.url)
+    
+    embed.set_footer(text=f"Ogłoszenie dodane przez {ctx.author.display_name}")
+
+    # Wysyłamy embed z dedykowanym przyciskiem linkującym
+    await ctx.send(embed=embed, view=WidokLinkuFilmu(url))
 
 if __name__ == "__main__":
     t = threading.Thread(target=run_http, daemon=True)
