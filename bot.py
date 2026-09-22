@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import time
 import random
@@ -109,7 +110,7 @@ async def on_message(message: discord.Message):
         profile["level"] += 1
         profile["xp"] -= needed_xp
         try:
-            await message.channel.send(f"🎉 Gratulacje {message.author.mention}! Awanseujesz na **{profile['level']} poziom**!")
+            await message.channel.send(f"🎉 Gratulacje {message.author.mention}! Awansujesz na **{profile['level']} poziom**!")
         except Exception:
             pass
 
@@ -119,7 +120,7 @@ async def on_message(message: discord.Message):
 # ==========================================
 # 4. FORMULARZ PROPOZYCJI (MODAL)
 # ==========================================
-class SuggestionModal(discord.ui.Modal, title="Zgłoś propozycję zmiana/dodatku"):
+class SuggestionModal(discord.ui.Modal, title="Zgłoś propozycję zmian/dodatków"):
     suggestion = discord.ui.TextInput(
         label="Twoja propozycja",
         style=discord.TextStyle.paragraph,
@@ -151,6 +152,28 @@ class SuggestionModal(discord.ui.Modal, title="Zgłoś propozycję zmiana/dodatk
 # 5. KOMENDY SLASH (APP COMMANDS)
 # ==========================================
 
+# --- WYŁĄCZENIE BOTA (TAJNA KOMENDA DLA ADMINA) ---
+@bot.tree.command(name="off", description="[ADMIN] Wyłącza bota po podaniu hasła i powodu")
+async def off(interaction: discord.Interaction, haslo: str, powod: str):
+    # Sprawdzenie czy komendę wykonuje właściciel bota
+    if interaction.user.id != ADMIN_DISCORD_ID:
+        await interaction.response.send_message("Nie masz uprawnień do tej komendy!", ephemeral=True)
+        return
+
+    # Sprawdzenie tajnego hasła
+    if haslo != "123supermario!":
+        await interaction.response.send_message("❌ Nieprawidłowe hasło!", ephemeral=True)
+        return
+
+    # Powiadomienie na czacie przed wyłączeniem
+    await interaction.response.send_message(f"🚨 **bot wyłączony:** {powod}")
+
+    print(f"Bot został wyłączony przez {interaction.user} z powodem: {powod}")
+    
+    # Zamknięcie sesji bota i procesów
+    await bot.close()
+    sys.exit(0)
+
 # --- PROPOZYCJA ---
 @bot.tree.command(name="propozycja", description="Wyślij propozycję poprawek/zmian na serwerze")
 async def propozycja(interaction: discord.Interaction):
@@ -177,7 +200,6 @@ async def daily(interaction: discord.Interaction):
     profile = get_user_profile(str(interaction.user.id))
     current_time = time.time()
     
-    # 24h w sekundach = 86400
     if current_time - profile["last_daily"] < 86400:
         remaining = int(86400 - (current_time - profile["last_daily"]))
         hours = remaining // 3600
