@@ -52,14 +52,13 @@ def get_user_wallet(user_id: int):
             "last_crime": 0
         }
         save_user_data(user_db)
-    # Zabezpieczenie dla nowych kluczy w istniejącym pliku JSON
     else:
         for key in ["last_work", "last_hustle", "last_crime"]:
             if key not in user_db[uid]:
                 user_db[uid][key] = 0
     return user_db[uid]
 
-# --- 1. MINIGRA SAPER (INTERAKTYWNE PRZYCISKI) ---
+# --- 1. MINIGRA SAPER ---
 class SaperGameView(discord.ui.View):
     def __init__(self, user_id: int, bet: int):
         super().__init__(timeout=60)
@@ -265,7 +264,7 @@ bot = BotPropozycji()
 async def work_slash(interaction: discord.Interaction):
     wallet = get_user_wallet(interaction.user.id)
     now = time.time()
-    cooldown = 3600  # 1 godzina
+    cooldown = 3600
 
     if now - wallet["last_work"] < cooldown:
         remaining = int((cooldown - (now - wallet["last_work"])) / 60)
@@ -297,7 +296,7 @@ async def work_slash(interaction: discord.Interaction):
 async def hustle_slash(interaction: discord.Interaction):
     wallet = get_user_wallet(interaction.user.id)
     now = time.time()
-    cooldown = 7200  # 2 godziny
+    cooldown = 7200
 
     if now - wallet["last_hustle"] < cooldown:
         remaining = int((cooldown - (now - wallet["last_hustle"])) / 60)
@@ -306,7 +305,6 @@ async def hustle_slash(interaction: discord.Interaction):
 
     wallet["last_hustle"] = now
 
-    # 60% szans na sukces / 40% na porażkę
     if random.random() < 0.6:
         success_scenarios = [
             "Handel starymi kartami kolekcjonerskimi",
@@ -333,7 +331,6 @@ async def hustle_slash(interaction: discord.Interaction):
         scenario = random.choice(fail_scenarios)
         loss = random.randint(50, 150)
         
-        # Zapobieganie ujemnemu stanowi konta
         wallet["coins"] = max(0, wallet["coins"] - loss)
         save_user_data(user_db)
 
@@ -349,7 +346,7 @@ async def hustle_slash(interaction: discord.Interaction):
 async def crime_slash(interaction: discord.Interaction):
     wallet = get_user_wallet(interaction.user.id)
     now = time.time()
-    cooldown = 10800  # 3 godziny
+    cooldown = 10800
 
     if now - wallet["last_crime"] < cooldown:
         remaining = int((cooldown - (now - wallet["last_crime"])) / 60)
@@ -358,7 +355,6 @@ async def crime_slash(interaction: discord.Interaction):
 
     wallet["last_crime"] = now
 
-    # 30% szans na sukces / 70% szans na wpadkę (głównie tracisz)
     if random.random() < 0.3:
         crime_success = [
             "Udana kradzież portfela w zatłoczonym autobusie",
@@ -499,4 +495,12 @@ async def ruletka_slash(interaction: discord.Interaction, stawka: int, kolor: ap
         color_emoji = "🟢" if winning_color == "zielony" else ("🔴" if winning_color == "czerwony" else "⚫")
         embed = discord.Embed(
             title="🎰 RZUT RULETKĄ",
-            description=f"Wypadło: {color_emoji} **{winning_color.upper()}** (Liczba {roll})\n\n❌ **PRZEGRANA!** Tracisz {stawka} monet.\nStan konta: **{wallet['coins']
+            description=f"Wypadło: {color_emoji} **{winning_color.upper()}** (Liczba {roll})\n\n❌ **PRZEGRANA!** Tracisz {stawka} monet.\nStan konta: **{wallet['coins']} monet**.",
+            color=discord.Color.red()
+        )
+
+    save_user_data(user_db)
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="saper", description="Zagraj w Sapera i odkrywaj pola z diamentami!")
+@app_commands.describe(stawka="Ile monet c
