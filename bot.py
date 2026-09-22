@@ -34,8 +34,13 @@ threading.Thread(target=run_http_server, daemon=True).start()
 # ⚙️ KONFIGURACJA I BAZY DANYCH W PAMIĘCI
 # ==============================================================================
 
-TOKEN = os.environ.get("TOKEN", "MTU1MDc5NTk0MjM3NzE2NDgzMA.GtYpNN.WlLzQxxCarQsFG9ltBuPKbdVaI5avjGfmgd-Tk")
-ADMIN_PASSWORD = "123supermaja!"
+# UWAGA: token bierzemy WYŁĄCZNIE ze zmiennej środowiskowej.
+# Ustaw go w Render -> Environment -> TOKEN. Nigdy nie wpisuj tokena w kodzie.
+TOKEN = os.environ.get("TOKEN")
+if not TOKEN:
+    raise RuntimeError("Brak zmiennej środowiskowej TOKEN! Ustaw ją w Render -> Environment.")
+
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "123supermaja!")
 
 proposals_db = {}
 user_economy = {}  # {user_id: {"balance": int, "level": int, "xp": int, "married": int, "cooldowns": {}}}
@@ -144,7 +149,7 @@ class ProposalPublicView(discord.ui.View):
     async def update_msg(self, interaction, data):
         embed = interaction.message.embeds[0]
         self.children[0].label = f"👍 Za ({len(data['za'])})"
-        self.children.label = f"👎 Przeciw ({len(data['przeciw'])})"
+        self.children[1].label = f"👎 Przeciw ({len(data['przeciw'])})"
         embed.set_field_at(1, name="Głosy", value=f"👍 Za: **{len(data['za'])}** | 👎 Przeciw: **{len(data['przeciw'])}**", inline=False)
         await interaction.response.edit_message(embed=embed, view=self)
 
@@ -370,7 +375,12 @@ class ZdrapkaBtn(discord.ui.Button):
             await interaction.response.edit_message(content=msg, view=view)
         else:
             await interaction.response.edit_message(view=view)
-        shop_items = {
+
+# ==============================================================================
+# 🛒 SKLEP, MAŁŻEŃSTWA, BOT
+# ==============================================================================
+
+shop_items = {
     "kolor_zolty": {"name": "Żółty nick (rola)", "cost": 500, "role_id": None},
     "vip": {"name": "Ranga VIP", "cost": 2000, "role_id": None}
 }
@@ -424,7 +434,7 @@ async def saper(interaction: discord.Interaction, stawka: int):
 async def ruletka(interaction: discord.Interaction, stawka: int, kolor: app_commands.Choice[str]):
     data = get_user_data(interaction.user.id)
     if data["balance"] < stawka or stawka <= 0: return await interaction.response.send_message("❌ Brak środków!", ephemeral=True)
-    roll = random.choices(["red", "black", "green"], weights=)[0]
+    roll = random.choices(["red", "black", "green"], weights=[45, 45, 10])[0]
     data["balance"] -= stawka
     if roll == kolor.value:
         mult = 14 if roll == "green" else 2
@@ -593,8 +603,8 @@ async def profil(interaction: discord.Interaction, uzytkownik: discord.Member = 
 
 @bot.tree.command(name="top", description="Ranking bogaczy i aktywnych")
 async def top(interaction: discord.Interaction):
-    sorted_u = sorted(user_economy.items(), key=lambda x: x["balance"], reverse=True)[:5]
-    desc = "\n".join([f"#{i+1} <@{u[0]}> – {u['balance']} monet (Lvl {u['level']})" for i, u in enumerate(sorted_u)]) or "Brak danych"
+    sorted_u = sorted(user_economy.items(), key=lambda x: x[1]["balance"], reverse=True)[:5]
+    desc = "\n".join([f"#{i+1} <@{u[0]}> – {u[1]['balance']} monet (Lvl {u[1]['level']})" for i, u in enumerate(sorted_u)]) or "Brak danych"
     emb = discord.Embed(title="🏆 TOP Bogaczy", description=desc, color=discord.Color.gold())
     await interaction.response.send_message(embed=emb)
 
