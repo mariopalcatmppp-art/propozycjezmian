@@ -3,13 +3,41 @@ from discord import app_commands
 from discord.ext import commands
 import random
 import datetime
+import os
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
-# --- KONFIGURACJA ---
-TOKEN = "MTU1MDc5NTk0MjM3NzE2NDgzMA.GtYpNN.WlLzQxxCarQsFG9ltBuPKbdVaI5avjGfmgd-Tk"
+# ==============================================================================
+# 🌐 WEBSERVER DLA RENDERA (Zapobiega uśpieniu usługi)
+# ==============================================================================
+
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b"Bot is alive!")
+
+    def log_message(self, format, *args):
+        return  # Wyłączenie zalewania konsoli logami HTTP
+
+def run_http_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
+    print(f"Serwer HTTP uruchomiony na porcie {port}")
+    server.serve_forever()
+
+# Uruchomienie serwera HTTP w osobnym wątku
+threading.Thread(target=run_http_server, daemon=True).start()
+
+# ==============================================================================
+# ⚙️ KONFIGURACJA BOTA
+# ==============================================================================
+
+TOKEN = os.environ.get("TOKEN", "MTU1MDc5NTk0MjM3NzE2NDgzMA.GtYpNN.WlLzQxxCarQsFG9ltBuPKbdVaI5avjGfmgd-Tk")
 ADMIN_PASSWORD = "123supermaja!"
 
-# --- BAZA DANYCH W PAMIĘCI (PROPOZYCJE I MODERACJA) ---
-# struktura propozycji: {msg_id: {"author": str, "title": str, "desc": str, "za": set(), "przeciw": set()}}
+# Baza danych w pamięci RAM
 proposals_db = {}
 
 # ==============================================================================
@@ -89,7 +117,6 @@ class ProposalPublicView(discord.ui.View):
             await interaction.response.send_message("❌ Brak danych w bazie.", ephemeral=True)
             return
 
-        # Dostęp tylko dla osób z prawami zarządcy
         if not interaction.user.guild_permissions.administrator:
             await interaction.response.send_message("🔒 Ta opcja jest widoczna wyłącznie dla Właściciela!", ephemeral=True)
             return
@@ -110,7 +137,8 @@ class ProposalPublicView(discord.ui.View):
             return
         await self.set_status(interaction, "🟢 ZAAKCEPTOWANA", discord.Color.green())
 
-    @discord.ui.button(label="🟡 W weryfikacji", style=discord.ButtonStyle.warning, custom_id="prop_admin_verify", row=1)
+    # POPRAWIONE: Użyto Style.secondary zamiast Style.warning
+    @discord.ui.button(label="🟡 W weryfikacji", style=discord.ButtonStyle.secondary, custom_id="prop_admin_verify", row=1)
     async def admin_verify(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not interaction.user.guild_permissions.administrator:
             await interaction.response.send_message("🔒 Brak uprawnień administratora!", ephemeral=True)
@@ -128,7 +156,6 @@ class ProposalPublicView(discord.ui.View):
         data = proposals_db[interaction.message.id]
         embed = interaction.message.embeds[0]
         
-        # Aktualizacja etykiet
         self.children[0].label = f"👍 Za ({len(data['za'])})"
         self.children[1].label = f"👎 Przeciw ({len(data['przeciw'])})"
         
@@ -345,11 +372,4 @@ async def avatar(interaction: discord.Interaction, uzytkownik: discord.Member = 
 @bot.tree.command(name="mem", description="Losowy żart")
 async def mem(interaction: discord.Interaction):
     zarty = [
-        "Dlaczego programiści wolą ciemny motyw? Bo światło przyciąga robaki (bugi)! 🐛",
-        "Pytanie: Ile programistów potrzeba do zmiany żarówki?\nOdpowiedź: Żadnego, to problem sprzętowy. 💡"
-    ]
-    await interaction.response.send_message(f"😄 {random.choice(zarty)}")
-
-
-# --- URUCHOMIENIE BOTA ---
-bot.run(TOKEN)
+        "Dlaczego programiści wolą ciemny motyw? Bo światło przyciąga robaki (b
