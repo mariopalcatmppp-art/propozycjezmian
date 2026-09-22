@@ -370,7 +370,7 @@ class ZdrapkaBtn(discord.ui.Button):
             await interaction.response.edit_message(content=msg, view=view)
         else:
             await interaction.response.edit_message(view=view)
-            shop_items = {
+        shop_items = {
     "kolor_zolty": {"name": "Żółty nick (rola)", "cost": 500, "role_id": None},
     "vip": {"name": "Ranga VIP", "cost": 2000, "role_id": None}
 }
@@ -638,5 +638,3 @@ async def mem(interaction: discord.Interaction):
 
 # --- URUCHOMIENIE BOTA ---
 bot.run(TOKEN)
-        
-                       
