@@ -369,7 +369,21 @@ async def avatar(interaction: discord.Interaction, uzytkownik: discord.Member = 
     embed.set_image(url=target.display_avatar.url)
     await interaction.response.send_message(embed=embed)
 
+@bot.tree.command(name="avatar", description="Pobierz avatar użytkownika")
+async def avatar(interaction: discord.Interaction, uzytkownik: discord.Member = None):
+    target = uzytkownik or interaction.user
+    embed = discord.Embed(title=f"Avatar użytkownika {target.display_name}")
+    embed.set_image(url=target.display_avatar.url)
+    await interaction.response.send_message(embed=embed)
+
 @bot.tree.command(name="mem", description="Losowy żart")
 async def mem(interaction: discord.Interaction):
     zarty = [
-        "Dlaczego programiści wolą ciemny motyw? Bo światło przyciąga robaki (b
+        "Dlaczego programiści wolą ciemny motyw? Bo światło przyciąga robaki (bugi)! 🐛",
+        "Pytanie: Ile programistów potrzeba do zmiany żarówki? Odpowiedź: Żadnego, to problem sprzętowy. 💡"
+    ]
+    await interaction.response.send_message(f"😄 {random.choice(zarty)}")
+
+# --- URUCHOMIENIE BOTA ---
+bot.run(TOKEN)
+
