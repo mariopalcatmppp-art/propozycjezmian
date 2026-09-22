@@ -119,7 +119,6 @@ class ProposalPublicView(discord.ui.View):
     async def admin_inspect(self, interaction: discord.Interaction, button: discord.ui.Button):
         data = proposals_db.get(interaction.message.id)
         if not data: return await interaction.response.send_message("❌ Brak w bazie.", ephemeral=True)
-        # Ograniczenie do właściciela lub uprawnień
         za_l = ", ".join([f"<@{u}>" for u in data["za"]]) or "Brak"
         przeciw_l = ", ".join([f"<@{u}>" for u in data["przeciw"]]) or "Brak"
         embed = discord.Embed(title="🕵️ Kto głosował?", color=discord.Color.dark_purple())
@@ -161,7 +160,7 @@ class ProposalPublicView(discord.ui.View):
 # ==============================================================================
 
 class AdminEcoModal(discord.ui.Modal, title="💰 Ekonomia Gracza"):
-    mode = "add" # add / remove
+    mode = "add"
     target_id = discord.ui.TextInput(label="ID Gracza", required=True)
     amount = discord.ui.TextInput(label="Kwota monet", required=True)
 
@@ -235,7 +234,6 @@ class AdminPunishModal(discord.ui.Modal, title="🔇 Kary (Timeout/Kick/Ban)"):
         except Exception as e:
             await interaction.response.send_message(f"❌ Błąd kary: {e}", ephemeral=True)
 
-
 class AdminPanelView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -302,7 +300,6 @@ class AdminPanelView(discord.ui.View):
     async def kill(self, interaction, btn):
         await interaction.response.send_message("🛑 Wyłączam bota bezpieczeństwem...", ephemeral=True)
         await interaction.client.close()
-
 
 # ==============================================================================
 # 🎰 3. HAZARD I MINI-GRY (PRZYCISKI I INTERAKCJE)
@@ -373,23 +370,12 @@ class ZdrapkaBtn(discord.ui.Button):
             await interaction.response.edit_message(content=msg, view=view)
         else:
             await interaction.response.edit_message(view=view)
-
-
-# ==============================================================================
-# 🪙 4. SKLEP I RELACJE (DATA)
-# ==============================================================================
-
-shop_items = {
+            shop_items = {
     "kolor_zolty": {"name": "Żółty nick (rola)", "cost": 500, "role_id": None},
     "vip": {"name": "Ranga VIP", "cost": 2000, "role_id": None}
 }
 
-marry_requests = {} # {target_id: author_id}
-
-
-# ==============================================================================
-# 🤖 GŁÓWNA KLASA BOTA
-# ==============================================================================
+marry_requests = {}
 
 class MyBot(commands.Bot):
     def __init__(self):
@@ -438,7 +424,7 @@ async def saper(interaction: discord.Interaction, stawka: int):
 async def ruletka(interaction: discord.Interaction, stawka: int, kolor: app_commands.Choice[str]):
     data = get_user_data(interaction.user.id)
     if data["balance"] < stawka or stawka <= 0: return await interaction.response.send_message("❌ Brak środków!", ephemeral=True)
-    roll = random.choices(["red", "black", "green"], weights=[48, 48, 4])[0]
+    roll = random.choices(["red", "black", "green"], weights=)[0]
     data["balance"] -= stawka
     if roll == kolor.value:
         mult = 14 if roll == "green" else 2
@@ -608,7 +594,7 @@ async def profil(interaction: discord.Interaction, uzytkownik: discord.Member = 
 @bot.tree.command(name="top", description="Ranking bogaczy i aktywnych")
 async def top(interaction: discord.Interaction):
     sorted_u = sorted(user_economy.items(), key=lambda x: x["balance"], reverse=True)[:5]
-    desc = "\n".join([f"#{i+1} <@{u[0]>> – {u['balance']} monet (Lvl {u['level']})" for i, u in enumerate(sorted_u)]) or "Brak danych"
+    desc = "\n".join([f"#{i+1} <@{u[0]}> – {u['balance']} monet (Lvl {u['level']})" for i, u in enumerate(sorted_u)]) or "Brak danych"
     emb = discord.Embed(title="🏆 TOP Bogaczy", description=desc, color=discord.Color.gold())
     await interaction.response.send_message(embed=emb)
 
@@ -652,3 +638,5 @@ async def mem(interaction: discord.Interaction):
 
 # --- URUCHOMIENIE BOTA ---
 bot.run(TOKEN)
+        
+                       
