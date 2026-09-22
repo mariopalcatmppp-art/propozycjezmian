@@ -46,9 +46,17 @@ def get_user_wallet(user_id: int):
     if uid not in user_db:
         user_db[uid] = {
             "coins": 100,  # Bonus na start
-            "last_daily": 0
+            "last_daily": 0,
+            "last_work": 0,
+            "last_hustle": 0,
+            "last_crime": 0
         }
         save_user_data(user_db)
+    # Zabezpieczenie dla nowych kluczy w istniejącym pliku JSON
+    else:
+        for key in ["last_work", "last_hustle", "last_crime"]:
+            if key not in user_db[uid]:
+                user_db[uid][key] = 0
     return user_db[uid]
 
 # --- 1. MINIGRA SAPER (INTERAKTYWNE PRZYCISKI) ---
@@ -59,7 +67,6 @@ class SaperGameView(discord.ui.View):
         self.bet = bet
         self.multiplier = 1.0
         self.safe_tiles_found = 0
-        # Losujemy 2 miny na 9 pól
         self.mines = set(random.sample(range(9), 2))
         self.revealed = set()
 
@@ -81,7 +88,6 @@ class SaperGameView(discord.ui.View):
             self.revealed.add(index)
 
             if index in self.mines:
-                # Trafiono na minę - przegrana
                 for child in self.children:
                     child.disabled = True
                     idx = int(child.custom_id.split("_")[1])
@@ -97,7 +103,6 @@ class SaperGameView(discord.ui.View):
                 await interaction.response.edit_message(embed=embed, view=self)
                 self.stop()
             else:
-                # Bezpieczne pole
                 self.safe_tiles_found += 1
                 self.multiplier += 0.4
 
@@ -110,7 +115,7 @@ class SaperGameView(discord.ui.View):
 
                 winnings = int(self.bet * self.multiplier)
 
-                if self.safe_tiles_found == 7: # Wyczyszczono całą planszę
+                if self.safe_tiles_found == 7:
                     wallet = get_user_wallet(self.user_id)
                     wallet["coins"] += winnings
                     save_user_data(user_db)
@@ -127,14 +132,14 @@ class SaperGameView(discord.ui.View):
                 else:
                     embed = discord.Embed(
                         title="💎 Trafiłeś bezpieczne pole!",
-                        description=f"Aktualny mnożnik: **x{self.multiplier:.1f}**\nMożliwa wygrana: **{winnings} monet**.\n\nKlikaj dalej lub zrealizuj wygraną poniżej!",
+                        description=f"Aktualny mnożnik: **x{self.multiplier:.1f}**\nMożliwa wygrana: **{winnings} monet**.\n\nKlikaj dalej!",
                         color=discord.Color.green()
                     )
                     await interaction.response.edit_message(embed=embed, view=self)
 
         return callback
 
-# --- 2. MODAL DLA ADMINA (POWÓD ODRZUCENIA PROPOZYCJI) ---
+# --- 2. MODAL DLA ADMINA ---
 class ModalOdrzucenia(discord.ui.Modal, title="Powód Odrzucenia Propozycji"):
     powod = discord.ui.TextInput(
         label="Powód odrzucenia",
@@ -254,7 +259,143 @@ class BotPropozycji(commands.Bot):
 
 bot = BotPropozycji()
 
-# --- KOMENDY SOCIAL & EKONOMIA (DLA WSZYSTKICH) ---
+# --- KOMENDY ZAROBKOWE: WORK / HUSTLE / CRIME ---
+
+@bot.tree.command(name="work", description="Uczciwa praca – zawsze zyskujesz bezpieczną kwotę (co 1 godz.)")
+async def work_slash(interaction: discord.Interaction):
+    wallet = get_user_wallet(interaction.user.id)
+    now = time.time()
+    cooldown = 3600  # 1 godzina
+
+    if now - wallet["last_work"] < cooldown:
+        remaining = int((cooldown - (now - wallet["last_work"])) / 60)
+        await interaction.response.send_message(f"⏳ Jesteś zmęczony pracą! Odpocznij jeszcze **{remaining} min.**", ephemeral=True)
+        return
+
+    jobs = [
+        "Koszenie trawnika u sąsiada",
+        "Wyprowadzanie psów na osiedlu",
+        "Praca na zmywaku w lokalnej knajpie",
+        "Układanie towaru w sklepie",
+        "Roznoszenie ulotek po mieście"
+    ]
+    job = random.choice(jobs)
+    earnings = random.randint(50, 150)
+
+    wallet["coins"] += earnings
+    wallet["last_work"] = now
+    save_user_data(user_db)
+
+    embed = discord.Embed(
+        title="💼 Uczciwa Praca",
+        description=f"Zrobiłeś: **{job}**\nZarobiłeś: **+{earnings} monet 🪙**\nAktualny stan konta: **{wallet['coins']} monet**.",
+        color=discord.Color.blue()
+    )
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="hustle", description="Dodatkowa fucha – możesz zyskać lub stracić monety! (co 2 godz.)")
+async def hustle_slash(interaction: discord.Interaction):
+    wallet = get_user_wallet(interaction.user.id)
+    now = time.time()
+    cooldown = 7200  # 2 godziny
+
+    if now - wallet["last_hustle"] < cooldown:
+        remaining = int((cooldown - (now - wallet["last_hustle"])) / 60)
+        await interaction.response.send_message(f"⏳ Musisz odczekać jeszcze **{remaining} min.** przed kolejną fuchą!", ephemeral=True)
+        return
+
+    wallet["last_hustle"] = now
+
+    # 60% szans na sukces / 40% na porażkę
+    if random.random() < 0.6:
+        success_scenarios = [
+            "Handel starymi kartami kolekcjonerskimi",
+            "Szybka naprawa komputera znajomemu",
+            "Odnowienie i sprzedaż mebli ze strychu",
+            "Krótki freelance w internecie"
+        ]
+        scenario = random.choice(success_scenarios)
+        profit = random.randint(100, 300)
+        wallet["coins"] += profit
+        save_user_data(user_db)
+
+        embed = discord.Embed(
+            title="📈 Udana Fucha (Hustle)!",
+            description=f"**{scenario}** zakończone sukcesem!\nZysk: **+{profit} monet 🪙**\nAktualny stan konta: **{wallet['coins']} monet**.",
+            color=discord.Color.green()
+        )
+    else:
+        fail_scenarios = [
+            "Inwestycja w kiepski projekt internetowy",
+            "Zakup uszkodzonego sprzętu do odprzedaży",
+            "Nietrafiony zakup na wyprzedaży"
+        ]
+        scenario = random.choice(fail_scenarios)
+        loss = random.randint(50, 150)
+        
+        # Zapobieganie ujemnemu stanowi konta
+        wallet["coins"] = max(0, wallet["coins"] - loss)
+        save_user_data(user_db)
+
+        embed = discord.Embed(
+            title="📉 Nietrafiony Hustle!",
+            description=f"**{scenario}** przyniósł straty!\nStraty: **-{loss} monet 🪙**\nAktualny stan konta: **{wallet['coins']} monet**.",
+            color=discord.Color.orange()
+        )
+
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="crime", description="Przestępstwo – duża wygrana, ale głównie tracisz na grzywnach! (co 3 godz.)")
+async def crime_slash(interaction: discord.Interaction):
+    wallet = get_user_wallet(interaction.user.id)
+    now = time.time()
+    cooldown = 10800  # 3 godziny
+
+    if now - wallet["last_crime"] < cooldown:
+        remaining = int((cooldown - (now - wallet["last_crime"])) / 60)
+        await interaction.response.send_message(f"⏳ Ukrywasz się przed policją! Wróć za **{remaining} min.**", ephemeral=True)
+        return
+
+    wallet["last_crime"] = now
+
+    # 30% szans na sukces / 70% szans na wpadkę (głównie tracisz)
+    if random.random() < 0.3:
+        crime_success = [
+            "Udana kradzież portfela w zatłoczonym autobusie",
+            "Skok na lokalny kiosk nocą",
+            "Niezauważone zgarnięcie utargu z kasy"
+        ]
+        scenario = random.choice(crime_success)
+        profit = random.randint(300, 800)
+        wallet["coins"] += profit
+        save_user_data(user_db)
+
+        embed = discord.Embed(
+            title="🥷 Udany Skok!",
+            description=f"Udało się! **{scenario}**.\nZyskałeś: **+{profit} monet 🪙**\nAktualny stan konta: **{wallet['coins']} monet**.",
+            color=discord.Color.purple()
+        )
+    else:
+        crime_fails = [
+            "Zostałeś złapany na gorącym uczynku przez ochronę",
+            "Policja namierzyła Cię z monitoringu miejskiego",
+            "Włączył się alarm, a Ty musiałeś porzucić łup"
+        ]
+        scenario = random.choice(crime_fails)
+        fine = random.randint(100, 400)
+        
+        wallet["coins"] = max(0, wallet["coins"] - fine)
+        save_user_data(user_db)
+
+        embed = discord.Embed(
+            title="🚨 ZŁAPANY PRZEZ POLICJĘ!",
+            description=f"**{scenario}**!\nZapłacono mandat/grzywnę: **-{fine} monet 🪙**\nAktualny stan konta: **{wallet['coins']} monet**.",
+            color=discord.Color.red()
+        )
+
+    await interaction.response.send_message(embed=embed)
+
+# --- POZOSTAŁE KOMENDY EKONOMII I SOCIAL ---
 
 @bot.tree.command(name="social", description="Wyświetla odnośniki do naszych mediów społecznościowych")
 async def social_slash(interaction: discord.Interaction):
@@ -329,10 +470,8 @@ async def ruletka_slash(interaction: discord.Interaction, stawka: int, kolor: ap
         await interaction.response.send_message(f"❌ Nie masz wystarczająco monet! Posiadasz tylko {wallet['coins']} monet.", ephemeral=True)
         return
 
-    # Pobieramy stawkę
     wallet["coins"] -= stawka
 
-    # Losowanie ruletki (0-36)
     roll = random.randint(0, 36)
     if roll == 0:
         winning_color = "zielony"
@@ -360,102 +499,4 @@ async def ruletka_slash(interaction: discord.Interaction, stawka: int, kolor: ap
         color_emoji = "🟢" if winning_color == "zielony" else ("🔴" if winning_color == "czerwony" else "⚫")
         embed = discord.Embed(
             title="🎰 RZUT RULETKĄ",
-            description=f"Wypadło: {color_emoji} **{winning_color.upper()}** (Liczba {roll})\n\n❌ **PRZEGRANA!** Tracisz {stawka} monet.\nStan konta: **{wallet['coins']} monet**.",
-            color=discord.Color.red()
-        )
-
-    save_user_data(user_db)
-    await interaction.response.send_message(embed=embed)
-
-@bot.tree.command(name="saper", description="Zagraj w Sapera i odkrywaj pola z diamentami!")
-@app_commands.describe(stawka="Ile monet chcesz postawić?")
-async def saper_slash(interaction: discord.Interaction, stawka: int):
-    if stawka <= 0:
-        await interaction.response.send_message("❌ Stawka musi być większa niż 0!", ephemeral=True)
-        return
-
-    wallet = get_user_wallet(interaction.user.id)
-    if wallet["coins"] < stawka:
-        await interaction.response.send_message(f"❌ Nie masz tylu monet! Posiadasz tylko {wallet['coins']} monet.", ephemeral=True)
-        return
-
-    wallet["coins"] -= stawka
-    save_user_data(user_db)
-
-    view = SaperGameView(interaction.user.id, stawka)
-    embed = discord.Embed(
-        title="💣 Saper - Gra Hazardowa",
-        description=f"Postawiłeś **{stawka} monet**.\nNa planszy są 2 miny i 7 diamentów 💎.\nKlikaj pola, aby zwiększać swój mnożnik!",
-        color=discord.Color.blue()
-    )
-    await interaction.response.send_message(embed=embed, view=view)
-
-@bot.tree.command(name="top_punkty", description="Wyświetla ranking najbogatszych graczy na serwerze")
-async def top_punkty_slash(interaction: discord.Interaction):
-    sorted_users = sorted(user_db.items(), key=lambda x: x[1].get("coins", 0), reverse=True)[:10]
-
-    embed = discord.Embed(
-        title="🏆 Ranking Najbogatszych Graczy",
-        color=discord.Color.gold()
-    )
-
-    description_text = ""
-    for idx, (uid, data) in enumerate(sorted_users, 1):
-        member = interaction.guild.get_member(int(uid))
-        name = member.display_name if member else f"Użytkownik ({uid})"
-        coins = data.get("coins", 0)
-        description_text += f"**{idx}.** {name} — **{coins} 🪙**\n"
-
-    embed.description = description_text or "Brak danych w rankingu."
-    await interaction.response.send_message(embed=embed)
-
-# --- KOMENDY ADMINA (TYLKO DLA CIEBIE) ---
-
-@bot.tree.command(name="setup", description="Wysyła panel propozycji na kanał (Tylko dla wyznaczonego admina)")
-async def setup_slash(interaction: discord.Interaction):
-    if interaction.user.id != ADMIN_DISCORD_ID:
-        await interaction.response.send_message("❌ Nie posiadasz uprawnień do użycia tej komendy!", ephemeral=True)
-        return
-
-    embed = discord.Embed(
-        title="💡 System Propozycji",
-        description="Kliknij poniższy przycisk, aby otworzyć formularz i przesłać swój pomysł!",
-        color=discord.Color.green()
-    )
-    await interaction.channel.send(embed=embed, view=WidokPropozycji())
-    await interaction.response.send_message("Panel propozycji został pomyślnie wysłany!", ephemeral=True)
-
-@bot.tree.command(name="ogloszenie", description="Wysyła ogłoszenie o nowym materiale/streamie (Tylko dla wyznaczonego admina)")
-@app_commands.describe(url="Wklej bezpośredni link do filmu lub streama")
-async def ogloszenie_slash(interaction: discord.Interaction, url: str):
-    if interaction.user.id != ADMIN_DISCORD_ID:
-        await interaction.response.send_message("❌ Nie posiadasz uprawnień do użycia tej komendy!", ephemeral=True)
-        return
-
-    embed = discord.Embed(
-        title="🚀 NOWY MATERIAŁ / STREAM!",
-        description=(
-            "Właśnie wpadł nowy materiał! 🔥\n\n"
-            "Wpadajcie sprawdzić, zostawcie coś po sobie dla algorytmu i dajcie znać, jak wrażenia!\n"
-            "Kliknij poniższy przycisk, aby przejść bezpośrednio do materiału."
-        ),
-        color=discord.Color.gold()
-    )
-    if interaction.guild and interaction.guild.icon:
-        embed.set_thumbnail(url=interaction.guild.icon.url)
-    
-    embed.set_footer(text=f"Ogłoszenie dodane przez {interaction.user.display_name}")
-
-    await interaction.channel.send(embed=embed, view=WidokLinkuFilmu(url))
-    await interaction.response.send_message("Ogłoszenie zostało wysłane na kanał!", ephemeral=True)
-
-if __name__ == "__main__":
-    t = threading.Thread(target=run_http, daemon=True)
-    t.start()
-
-    if not TOKEN:
-        print("BŁĄD: Brak tokenu DISCORD_TOKEN w Environment Variables!")
-    else:
-        print("Łączenie z Discordem...")
-        bot.run(TOKEN)
-        
+            description=f"Wypadło: {color_emoji} **{winning_color.upper()}** (Liczba {roll})\n\n❌ **PRZEGRANA!** Tracisz {stawka} monet.\nStan konta: **{wallet['coins']
