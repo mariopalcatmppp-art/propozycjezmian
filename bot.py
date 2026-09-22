@@ -218,7 +218,7 @@ class AnnouncementModal(discord.ui.Modal, title="📢 Kreator Ogłoszeń"):
         await interaction.channel.send(embed=embed, view=view)
         await interaction.response.send_message("✅ Ogłoszenie wysłane!", ephemeral=True)
 
-class AdminPunishModal(discord.ui.Modal, title="🔇 Kary (Timeout/Kick/Ban)"):
+class AdminPunishModal(discord.ui.Modal, title="⚡ Kary (Timeout/Kick/Ban)"):
     action = "timeout"
     target_id = discord.ui.TextInput(label="ID Gracza", required=True)
     param = discord.ui.TextInput(label="Czas (minuty dla timeout) lub Powód", required=False)
@@ -238,36 +238,8 @@ class AdminPunishModal(discord.ui.Modal, title="🔇 Kary (Timeout/Kick/Ban)"):
                 await interaction.response.send_message(f"🔨 Zbanowano {target.mention}.", ephemeral=True)
         except Exception as e:
             await interaction.response.send_message(f"❌ Błąd kary: {e}", ephemeral=True)
-            class AdminPanelView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
 
-    @discord.ui.button(label="📊 Statystyki", style=discord.ButtonStyle.primary, row=0, custom_id="admin_stats")
-    async def stats(self, interaction, btn):
-        g = interaction.guild
-        ram = psutil.Process().memory_info().rss / 1024 / 1024
-        emb = discord.Embed(title="📊 Statystyki Projektu", color=discord.Color.blue())
-        emb.add_field(name="RAM bota", value=f"{ram:.2f} MB")
-        emb.add_field(name="Ping", value=f"{round(interaction.client.latency*1000)}ms")
-        emb.add_field(name="Ludzie / Kanały", value=f"{g.member_count} / {len(g.channels)}")
-        await interaction.response.send_message(embed=emb, ephemeral=True)
 
-    @discord.ui.button(label="📌 /push Propozycje", style=discord.ButtonStyle.success, row=0, custom_id="admin_push")
-    async def push(self, interaction, btn):
-        emb = discord.Embed(title="💡 Zgłoś pomysł!", description="Kliknij przycisk poniżej, aby wysłać propozycję.", color=discord.Color.gold())
-        await interaction.channel.send(embed=emb, view=ProposalTriggerView())
-        await interaction.response.send_message("✅ Wysłano przycisk propozycji na kanał!", ephemeral=True)
-
-    @discord.ui.button(label="📢 Ogłoszenie", style=discord.ButtonStyle.secondary, row=0, custom_id="admin_ann")
-    async def ann(self, interaction, btn):
-        await interaction.response.send_modal(AnnouncementModal())
-
-    @discord.ui.button(label="➕ Monety", style=discord.ButtonStyle.success, row=1, custom_id="admin_add_m")
-    async def add_m(self, interaction, btn):
-        m = AdminEcoModal(); m.title = "➕ Dodaj Monety"; m.mode = "add"
-        await interaction.response.send_modal(m)
-
-    @discord.ui.button(label="➖ Zabierz Monety", style=discord.ButtonStyle.danger, row=1, custom_id="admin_rem_m")
 class AdminPanelView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
