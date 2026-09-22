@@ -5,7 +5,7 @@ import random
 import datetime
 
 # --- KONFIGURACJA ---
-TOKEN = "TUTAJ_WKLEJ_SWOJ_TOKEN_BOTA"
+TOKEN = "MTU1MDc5NTk0MjM3NzE2NDgzMA.Gvh_tU.QXj0incXBGsKdESt0xp6HhsTm74vMMcDgnpx0k"
 ADMIN_PASSWORD = "123supermaja!"
 
 # --- BAZA DANYCH W PAMIĘCI (PROPOZYCJE I MODERACJA) ---
